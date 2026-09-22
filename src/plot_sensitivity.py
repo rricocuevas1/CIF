@@ -55,11 +55,7 @@ plt.rcParams.update({
 def csv_path(results_dir, dataset, backbone, n):
     d = os.path.join(results_dir, dataset, "integrated")
     if n == 0:
-        return os.path.join(d, f"CIF_J_NoMC_{backbone}_encoder_integrated.csv")
-    if n == 16:
-        swept = os.path.join(d, f"CIF_{backbone}_encoder_nsamples16_integrated.csv")
-        return swept if os.path.exists(swept) else os.path.join(
-            d, f"CIF_{backbone}_encoder_integrated.csv")
+        return os.path.join(d, f"CIF_{backbone}_encoder_integrated.csv")
     return os.path.join(d, f"CIF_{backbone}_encoder_nsamples{n}_integrated.csv")
 
 

@@ -3,14 +3,14 @@
 if [ "$#" -gt 0 ]; then
     N_SAMPLES_VALUES=("$@")
 else
-    N_SAMPLES_VALUES=(2 4 8)
+    N_SAMPLES_VALUES=(2 4 8 16)
 fi
 
 # Sanity-check: each N_SAMPLES value must be a positive integer.
 for v in "${N_SAMPLES_VALUES[@]}"; do
     if ! [[ "$v" =~ ^[1-9][0-9]*$ ]]; then
         echo "ERROR: N_SAMPLES value '$v' is not a positive integer." >&2
-        echo "Usage: $0 [N_SAMPLES ...]   (e.g. '$0 2'  or  '$0 2 4 8')" >&2
+        echo "Usage: $0 [N_SAMPLES ...]   (e.g. '$0 2'  or  '$0 2 4 8 16')" >&2
         exit 1
     fi
 done

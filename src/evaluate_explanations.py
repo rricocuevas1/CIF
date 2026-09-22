@@ -21,9 +21,7 @@ from baselines.cgnn.cal import CAL
 from baselines.cgnn.icl import ICL
 from baselines.cgnn.ace import ACE
 from baselines.cgnn.dir import DIR
-from cif.cif import CIF
-from cif.cif_J_NoMC import CIF_J_NoMC
-from cif.cif_NoJ_MC import CIF_NoJ_MC
+from cif.cif import CIF, CIF_NoJ
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -39,8 +37,7 @@ BACKBONE_MAP = {
 }
 MODEL_MAP = {
     "DIR": DIR, "CAL": CAL, "ICL": ICL, "ACE": ACE,
-    "CIF_J_NoMC": CIF_J_NoMC,
-    "CIF_NoJ_MC": CIF_NoJ_MC,
+    "CIF_NoJ": CIF_NoJ,
     "CIF": CIF,
 }
 SEEDS = [28, 1999, 1130, 5898, 820] 

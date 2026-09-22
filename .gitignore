@@ -1,0 +1,24 @@
+# Ignore data and results
+data/
+results/
+failed_runs*.txt
+
+# Ignore Lightning logs and checkpoints
+lightning_logs/
+**/checkpoints/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.env/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# OS junk
+.DS_Store

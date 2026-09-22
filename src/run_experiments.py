@@ -32,10 +32,8 @@ from baselines.cgnn.icl import ICL # Subclass of CGNN
 from baselines.cgnn.ace import ACE # Subclass of CGNN 
 from baselines.cgnn.dir import DIR # Subclass of CGNN 
 # Our proposed models
-from cif.cif import CIF # Subclass of CGNN
+from cif.cif import CIF, CIF_NoJ # Subclasses of CGNN
 # Ablation models:
-from cif.cif_NoJ_MC import CIF_NoJ_MC
-from cif.cif_J_NoMC import CIF_J_NoMC
 # Pytorch lightning imports 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
@@ -50,8 +48,7 @@ MACHINE_PRECISION = 'bf16-mixed'
 MODEL_CLASSES = [
     GNN,  
     CIF,
-    CIF_NoJ_MC,
-    CIF_J_NoMC,
+    CIF_NoJ,
     DIR,  
     CAL,  
     ICL,  
@@ -98,20 +95,10 @@ print(f"ACCELERATOR is {accelerator}")
 # Objective function for optuna hyperparameter tuning
 def objective_wrapper(model_class, gnn_backbone, input_channels, num_classes, loader, directory_name):
     def objective(trial):
-        two_speed = model_class.__name__ == "CIF_NoJ_MC"
-        if two_speed:
-            lr_head = trial.suggest_categorical("lr_head", [5e-5, 1e-4, 5e-4, 1e-3])
-            lr_base = trial.suggest_categorical("lr_base", [5e-5, 1e-4, 5e-4, 1e-3])
-            if lr_base >= lr_head: 
-                raise optuna.TrialPruned()          
-            wd = trial.suggest_categorical("wd", [1e-3])
-            optimizer_hparams = {"lr_head": lr_head, "lr_base": lr_base, "wd": wd}
-            run_tag = f"lrh_{lr_head}_lrb_{lr_base}_wd_{wd}"
-        else: 
-            lr = trial.suggest_categorical("lr", [5e-5, 1e-4, 5e-4, 1e-3])
-            wd = trial.suggest_categorical("wd", [1e-3])
-            optimizer_hparams = {"lr": lr, "wd": wd}
-            run_tag = f"lr_{lr}_wd_{wd}"
+        lr = trial.suggest_categorical("lr", [5e-5, 1e-4, 5e-4, 1e-3])
+        wd = trial.suggest_categorical("wd", [1e-3])
+        optimizer_hparams = {"lr": lr, "wd": wd}
+        run_tag = f"lr_{lr}_wd_{wd}"
 
         # Build model
         model = model_class(
@@ -176,17 +163,10 @@ def objective_wrapper(model_class, gnn_backbone, input_channels, num_classes, lo
 
 # Run hyperparameter tuning
 def run_hparam_tuning(model_class, gnn_backbone, input_channels, num_classes, loader, directory_name):
-    if model_class.__name__ == "CIF_NoJ_MC":
-        search_space = {
-            "lr_head": [5e-5, 1e-4, 5e-4, 1e-3],
-            "lr_base": [5e-5, 1e-4, 5e-4, 1e-3],
-            "wd": [1e-3],
-        }
-    else: 
-        search_space = {
-            "lr": [5e-5, 1e-4, 5e-4, 1e-3],
-            "wd": [1e-3],
-        }
+    search_space = {
+        "lr": [5e-5, 1e-4, 5e-4, 1e-3],
+        "wd": [1e-3],
+    }
     sampler = optuna.samplers.GridSampler(search_space, seed=0)
 
     study = optuna.create_study(
@@ -373,8 +353,8 @@ def main():
         if not os.path.exists(best_params_file_name):
             raise FileNotFoundError(
                 f"Tagged run (suffix '{ARTIFACT_SUFFIX}') expected existing best hyperparameters "
-                f"at {best_params_file_name}, but none were found. Run the default (untagged, "
-                f"N_SAMPLES=16) experiment for this model/backbone first to produce them."
+                f"at {best_params_file_name}, but none were found. Run the default "
+                f"(untagged) experiment for this model/backbone first to produce them."
             )
         print(f"[suffix={ARTIFACT_SUFFIX}] Skipping hparam tuning; reusing {best_params_file_name}")
     else:

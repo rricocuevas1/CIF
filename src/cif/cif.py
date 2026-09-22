@@ -1,9 +1,11 @@
 import torch
+import math
 import torch.nn.functional as F
 from src.hyper_parameters import POOLING
 import torch.nn as nn
 from typing import Dict, Any, Type
 from src.baselines.cgnn.cgnn import CGNN
+from cif.remix_readout_NoMC import ReMix_Readout_NoMC
 
 
 class CIF(CGNN):
@@ -25,7 +27,14 @@ class CIF(CGNN):
             optimizer_hparams
         )
         # Update hyperparameters
-        self.cgnn_config.update(model_hparams)        
+        self.cgnn_config.update(model_hparams)
+        self.no_mc = self.cgnn_config['n_samples_c'] == 0
+        self.jensen = self.cgnn_config['jensen']
+        if self.no_mc:
+            self.remix_readout = ReMix_Readout_NoMC(
+                projection= self.projection_fc1,
+                mlp = self.mlp
+            )
     
     # Loss
     def compute_loss(self, batch, remix=True):
@@ -85,12 +94,13 @@ class CIF(CGNN):
         h_s = POOLING(h_s, batch.batch)  # (batch_size, emb_dim)
 
         # 3. Sampling
-        # Causal sampling: G_i ~ P(G), c_ik ~ P(c|G_i), Dim = (n_samples_c, n_nodes_batch, emb_dim)
-        h_c = h_c.unsqueeze(0).expand(n_samples_c, -1, -1)
-        h_c = h_c + sigma * torch.randn_like(h_c)
-        # Spurious sampling: G_j ~ P(G), s_jl ~ P(s|G_j), Dim = (n_samples_s, n_nodes_batch, emb_dim)
-        h_s = h_s.unsqueeze(0).expand(n_samples_s, -1, -1)
-        h_s = h_s + sigma * torch.randn_like(h_s)
+        if not self.no_mc:
+            # Causal sampling: G_i ~ P(G), c_ik ~ P(c|G_i), Dim = (n_samples_c, n_nodes_batch, emb_dim)
+            h_c = h_c.unsqueeze(0).expand(n_samples_c, -1, -1)
+            h_c = h_c + sigma * torch.randn_like(h_c)
+            # Spurious sampling: G_j ~ P(G), s_jl ~ P(s|G_j), Dim = (n_samples_s, n_nodes_batch, emb_dim)
+            h_s = h_s.unsqueeze(0).expand(n_samples_s, -1, -1)
+            h_s = h_s + sigma * torch.randn_like(h_s)
         
         # 4. PREDICTION 
         # Forward pass over the MLP, Dim = (n_samples_z, n_samples_c, batch_size, n_samples_s, batch_size, n_classes)
@@ -101,15 +111,25 @@ class CIF(CGNN):
             remix=remix
         ) # returns logits
         
-        # Application of Jensen's inequality
-        log_probs = F.log_softmax(logits, dim=-1) # (n_samples_z, n_samples_c, batch_size, n_samples_s, batch_size, num_classes)
-        avg_log_probs = log_probs.mean(dim=(0, 3, 4)) # Dim = (n_samples_c, batch_size, n_classes)
-        avg_log_probs = avg_log_probs.reshape(-1, num_classes) # Dim = (n_samples_c * n_nodes_batch, num_classes)
-        
-        # Labels
-        labels = batch.y # Dim = (n_nodes_batch, )
-        labels = labels.unsqueeze(0).expand(n_samples_c, -1).long() # Dim = (n_samples_c, n_nodes_batch)
-        labels = labels.reshape(-1) # Dim = (n_samples_c * n_nodes_batch,)
+        log_probs = F.log_softmax(logits, dim=-1)
+        if self.no_mc:
+            dims = 1
+            n = log_probs.size(1)
+        else:
+            dims = (0, 3, 4)
+            n = log_probs.size(0) * log_probs.size(3) * log_probs.size(4)
+        if self.jensen:
+            avg_log_probs = log_probs.mean(dim=dims)
+        else:
+            avg_log_probs = torch.logsumexp(log_probs, dim=dims) - math.log(n)
+
+        if self.no_mc:
+            labels = batch.y # Dim = (batch_size, )
+        else:
+            avg_log_probs = avg_log_probs.reshape(-1, num_classes) # Dim = (n_samples_c * n_nodes_batch, num_classes)
+            labels = batch.y # Dim = (n_nodes_batch, )
+            labels = labels.unsqueeze(0).expand(n_samples_c, -1).long() # Dim = (n_samples_c, n_nodes_batch)
+            labels = labels.reshape(-1) # Dim = (n_samples_c * n_nodes_batch,)
         
         # Overall CIF loss
         total_loss = F.nll_loss(avg_log_probs, labels)
@@ -148,3 +168,7 @@ class CIF(CGNN):
         self.val_metrics.update(probs, labels)
 
         return total_loss
+
+
+class CIF_NoJ(CIF):
+    pass

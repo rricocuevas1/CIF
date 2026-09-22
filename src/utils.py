@@ -354,7 +354,6 @@ SUMMARY_SYSTEM_ROWS = [
     ("CAL",            "CAL",                False),
     ("ICL",            "ICL",                False),
     ("ACE",            "ACE",                False),
-    ("CIF_J_NoMC",   r"CIF\_J\_NoMC",    False),
     ("CIF",          "CIF",              True),   # ours (full model)
 ]
 MAIN_SYSTEM_ROWS = [
@@ -366,7 +365,7 @@ MAIN_SYSTEM_ROWS = [
 ]
 CE_CIF_ABLATION_ROWS = [
     ("GNN",          "CE",             False),
-    ("CIF_NoJ_MC", r"CIF$_{\leq}$",  False),
+    ("CIF_NoJ", r"CIF$_{\leq}$",  False),
     ("CIF",        "CIF",            True),   # ours (full model)
 ]
 
@@ -679,7 +678,7 @@ def save_deaggregated_backbone_first_explanation_table(
 
 
 def generate_cif_ce_absolute_ablation_table(results_dir, json_path, caption, decimals=2):
-    OURS, ABL, CE = "CIF", "CIF_NoJ_MC", "GNN"
+    OURS, ABL, CE = "CIF", "CIF_NoJ", "GNN"
     sys_c = [(OURS, "CIF", True), (ABL, r"CIF$_{\leq}$", False), (CE, "CE", False)]
     sys_e = [(OURS, "CIF", True), (ABL, r"CIF$_{\leq}$", False)]   # CE has no rationale
     method_lbl = {OURS: r"\textbf{CIF}", ABL: r"CIF$_{\leq}$", CE: "CE"}

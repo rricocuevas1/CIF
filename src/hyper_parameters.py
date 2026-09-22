@@ -28,7 +28,7 @@ DIM_EMBEDDING_SPACE = 32
 HIDDEN_CHANNELS_MLP = 16
 HIDDEN_CHANNELS_GNN = 16
 # Sharpness of MC approximation
-N_SAMPLES = int(os.environ.get("N_SAMPLES", 16))
+N_SAMPLES = int(os.environ.get("N_SAMPLES", 0))
 SIGMA = 0.01
 DROPOUT = 0.1
 N_HEADS = 4
@@ -145,14 +145,16 @@ CIF_hparams = {
     'out_channels_spurious': DIM_EMBEDDING_SPACE, # Dimension of the embedding space
     'hidden_channels_mlp': HIDDEN_CHANNELS_MLP, # Hidden dimension of the MLPs
     'cat_or_add': CAT_OR_ADD, # Summed or concatenated representations
+    'jensen': True,
     'c_i_f': True # Causal Information Flow flag
 }
+
+CIF_NoJ_hparams = {**CIF_hparams, 'jensen': False}
 # Models 
 model_class_hparams = {
     "GNN": GNN_hparams,
     "CIF": CIF_hparams,
-    "CIF_NoJ_MC": CIF_hparams,
-    "CIF_J_NoMC": CIF_hparams,
+    "CIF_NoJ": CIF_NoJ_hparams,
     "DIR": DIR_hparams,
     "CAL": CAL_hparams,
     "ICL": ICL_hparams,
